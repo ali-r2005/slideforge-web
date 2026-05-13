@@ -15,6 +15,9 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { createApiFileUrl } from "@/lib/api-url"
+import {
+  updatePresentation,
+} from "@/services/presentation.service"
 import type {
   GeneratePresentationResponse,
   PresentationPlaceholder,
@@ -56,7 +59,12 @@ export function PresentationEditorWorkspace({
   const [selectedSlideNumber, setSelectedSlideNumber] = useState(
     slides[0]?.slide_number ?? 1
   )
+  const [isUpdating, setIsUpdating] = useState(false)
   const [updateMessage, setUpdateMessage] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  
+  // We keep a timestamp to bust cache for the PDF preview
+  const [refreshTimestamp, setRefreshTimestamp] = useState(Date.now())
 
   const selectedSlide = useMemo(
     () =>
@@ -66,13 +74,14 @@ export function PresentationEditorWorkspace({
   )
 
   const pdfUrl = useMemo(
-    () => createApiFileUrl(presentation.pdf_url),
-    [presentation.pdf_url]
+    () => createApiFileUrl(`${presentation.pdf_url}?t=${refreshTimestamp}`),
+    [presentation.pdf_url, refreshTimestamp]
   )
   const pptxUrl = useMemo(
-    () => createApiFileUrl(presentation.pptx_url),
-    [presentation.pptx_url]
+    () => createApiFileUrl(`${presentation.pptx_url}?t=${refreshTimestamp}`),
+    [presentation.pptx_url, refreshTimestamp]
   )
+
 
   function handleSlideSelect(slideNumber: string) {
     setSelectedSlideNumber(Number(slideNumber))
@@ -114,15 +123,37 @@ export function PresentationEditorWorkspace({
     )
   }
 
-  function handlePrepareUpdate() {
-    const updatePayload = createPresentationUpdatePayload(
-      slides,
-      presentation.pdf_url,
-      presentation.pptx_url
-    )
+  async function handleUpdate() {
+    try {
+      setIsUpdating(true)
+      setUpdateMessage("")
+      setError(null)
 
-    console.log("Presentation update payload:", updatePayload)
-    setUpdateMessage("Changes are ready for the update action.")
+      const fileId = getFileNameFromUrl(presentation.pptx_url).split(".")[0]
+      
+      // Flatten slides back into replacements dictionary
+      const replacements: Record<string, string> = {}
+      slides.forEach(slide => {
+        slide.placeholders.forEach(placeholder => {
+          replacements[placeholder.placeholder] = placeholder.value
+        })
+      })
+
+      const response = await updatePresentation({
+        template_name: presentation.template_name,
+        file_id: fileId,
+        replacements
+      })
+
+      setSlides(clonePresentationSlides(response.presentation_data))
+      setRefreshTimestamp(Date.now())
+      setUpdateMessage("Presentation updated successfully!")
+    } catch (err) {
+      console.error("Update failed:", err)
+      setError("Failed to update presentation. Please try again.")
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
   return (
@@ -178,10 +209,24 @@ export function PresentationEditorWorkspace({
         )}
 
         <div className="flex flex-col gap-3 border-t pt-4">
-          <Button type="button" onClick={handlePrepareUpdate}>
-            <SaveIcon />
-            Update
+          <Button 
+            type="button" 
+            onClick={handleUpdate} 
+            disabled={isUpdating}
+          >
+            {isUpdating ? (
+              <Loader2Icon className="animate-spin" />
+            ) : (
+              <SaveIcon />
+            )}
+            {isUpdating ? "Updating..." : "Update"}
           </Button>
+
+          {error ? (
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
 
           {updateMessage ? (
             <p className="flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200">

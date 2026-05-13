@@ -30,7 +30,16 @@ export type PresentationSlideData = {
 }
 
 export type GeneratePresentationResponse = {
+  template_name: string
   presentation_data: PresentationSlideData[]
   pdf_url: string
   pptx_url: string
 }
+
+
+export type UpdatePresentationPayload = {
+  template_name: string
+  file_id: string
+  replacements: Record<string, string>
+}
+
