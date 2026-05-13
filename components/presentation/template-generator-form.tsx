@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import dynamic from "next/dynamic"
+import { useEffect, useMemo, useState } from "react"
 import { Loader2Icon, PresentationIcon } from "lucide-react"
 
+import { PresentationEditorWorkspace } from "@/components/presentation/presentation-editor-workspace"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -17,29 +17,10 @@ import {
   generatePresentation,
   getTemplates,
 } from "@/services/presentation.service"
-import type { PresentationTemplate } from "@/types/presentation"
-
-type GeneratedPdfPreview = {
-  blob: Blob
-  fileName: string
-  url: string
-}
-
-const PdfPreview = dynamic(
-  () =>
-    import("@/components/presentation/pdf-preview").then(
-      (module) => module.PdfPreview
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex min-h-[480px] items-center justify-center rounded-lg border bg-card text-sm text-muted-foreground shadow-sm">
-        <Loader2Icon className="mr-2 size-4 animate-spin" />
-        Loading preview...
-      </div>
-    ),
-  }
-)
+import type {
+  GeneratePresentationResponse,
+  PresentationTemplate,
+} from "@/types/presentation"
 
 export function TemplateGeneratorForm() {
   const [templates, setTemplates] = useState<PresentationTemplate[]>([])
@@ -48,9 +29,8 @@ export function TemplateGeneratorForm() {
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
-  const [generatedPdfPreview, setGeneratedPdfPreview] =
-    useState<GeneratedPdfPreview | null>(null)
-  const generatedPdfUrlRef = useRef<string | null>(null)
+  const [generatedPresentation, setGeneratedPresentation] =
+    useState<GeneratePresentationResponse | null>(null)
 
   const canGenerate = useMemo(
     () => templateName.trim().length > 0 && prompt.trim().length > 0,
@@ -92,18 +72,6 @@ export function TemplateGeneratorForm() {
     }
   }, [])
 
-  useEffect(() => {
-    return () => {
-      revokePdfUrl(generatedPdfUrlRef.current)
-    }
-  }, [])
-
-  function replaceGeneratedPdfPreview(preview: GeneratedPdfPreview | null) {
-    revokePdfUrl(generatedPdfUrlRef.current)
-    generatedPdfUrlRef.current = preview?.url ?? null
-    setGeneratedPdfPreview(preview)
-  }
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -115,18 +83,14 @@ export function TemplateGeneratorForm() {
     try {
       setIsGenerating(true)
       setErrorMessage("")
-      replaceGeneratedPdfPreview(null)
+      setGeneratedPresentation(null)
 
-      const pdfBlob = await generatePresentation({
+      const generatedPresentationResponse = await generatePresentation({
         template_name: templateName,
         prompt,
       })
 
-      replaceGeneratedPdfPreview({
-        blob: pdfBlob,
-        fileName: createPdfFileName(templateName),
-        url: URL.createObjectURL(pdfBlob),
-      })
+      setGeneratedPresentation(generatedPresentationResponse)
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
     } finally {
@@ -134,20 +98,12 @@ export function TemplateGeneratorForm() {
     }
   }
 
-  function handleDownload() {
-    if (!generatedPdfPreview) {
-      return
-    }
-
-    downloadPdf(generatedPdfPreview.blob, generatedPdfPreview.fileName)
-  }
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex w-full max-w-5xl flex-col gap-6"
-    >
-      <div className="flex flex-col gap-6 rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+    <div className="flex w-full max-w-7xl flex-col gap-6">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-6 rounded-lg border bg-card p-6 text-card-foreground shadow-sm"
+      >
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-normal">
             Generate presentation
@@ -217,44 +173,16 @@ export function TemplateGeneratorForm() {
             ) : (
               <PresentationIcon />
             )}
-            {isGenerating ? "Generating..." : "Generate PDF"}
+            {isGenerating ? "Generating..." : "Generate presentation"}
           </Button>
         </div>
-      </div>
+      </form>
 
-      {generatedPdfPreview ? (
-        <PdfPreview
-          fileName={generatedPdfPreview.fileName}
-          pdfUrl={generatedPdfPreview.url}
-          onDownload={handleDownload}
-        />
+      {generatedPresentation ? (
+        <PresentationEditorWorkspace presentation={generatedPresentation} />
       ) : null}
-    </form>
+    </div>
   )
-}
-
-function createPdfFileName(templateName: string) {
-  const safeTemplateName = templateName.trim() || "presentation"
-
-  return `${safeTemplateName}.pdf`
-}
-
-function revokePdfUrl(url: string | null) {
-  if (url) {
-    URL.revokeObjectURL(url)
-  }
-}
-
-function downloadPdf(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
 }
 
 function getErrorMessage(error: unknown) {

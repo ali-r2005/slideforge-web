@@ -5,7 +5,6 @@ import type { PDFDocumentProxy } from "pdfjs-dist"
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  DownloadIcon,
   FileTextIcon,
   Loader2Icon,
   ZoomInIcon,
@@ -23,18 +22,25 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 type PdfPreviewProps = {
   fileName: string
   pdfUrl: string
-  onDownload: () => void
+  pageNumber?: number
+  onPageChange?: (pageNumber: number) => void
 }
 
-export function PdfPreview({ fileName, pdfUrl, onDownload }: PdfPreviewProps) {
+export function PdfPreview({
+  fileName,
+  pdfUrl,
+  pageNumber,
+  onPageChange,
+}: PdfPreviewProps) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [numPages, setNumPages] = useState(0)
-  const [pageNumber, setPageNumber] = useState(1)
+  const [internalPageNumber, setInternalPageNumber] = useState(1)
   const [pageWidth, setPageWidth] = useState(720)
   const [scale, setScale] = useState(1)
 
-  const canGoBack = pageNumber > 1
-  const canGoForward = numPages > 0 && pageNumber < numPages
+  const visiblePageNumber = pageNumber ?? internalPageNumber
+  const canGoBack = visiblePageNumber > 1
+  const canGoForward = numPages > 0 && visiblePageNumber < numPages
   const renderedPageWidth = Math.round(pageWidth * scale)
 
   useEffect(() => {
@@ -62,17 +68,26 @@ export function PdfPreview({ fileName, pdfUrl, onDownload }: PdfPreviewProps) {
 
   function handleLoadSuccess(pdf: PDFDocumentProxy) {
     setNumPages(pdf.numPages)
-    setPageNumber(1)
+    changePage(Math.min(Math.max(visiblePageNumber, 1), pdf.numPages))
   }
 
   function handlePreviousPage() {
-    setPageNumber((currentPageNumber) => Math.max(1, currentPageNumber - 1))
+    changePage(Math.max(1, visiblePageNumber - 1))
   }
 
   function handleNextPage() {
-    setPageNumber((currentPageNumber) =>
-      numPages > 0 ? Math.min(numPages, currentPageNumber + 1) : currentPageNumber
+    changePage(
+      numPages > 0 ? Math.min(numPages, visiblePageNumber + 1) : visiblePageNumber
     )
+  }
+
+  function changePage(nextPageNumber: number) {
+    if (onPageChange) {
+      onPageChange(nextPageNumber)
+      return
+    }
+
+    setInternalPageNumber(nextPageNumber)
   }
 
   function handleZoomOut() {
@@ -145,22 +160,12 @@ export function PdfPreview({ fileName, pdfUrl, onDownload }: PdfPreviewProps) {
             </Button>
           </div>
 
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={onDownload}
-            className="w-full sm:w-fit"
-          >
-            <DownloadIcon />
-            Download PDF
-          </Button>
         </div>
       </div>
 
       <div className="flex items-center justify-between rounded-md border bg-muted px-3 py-2 text-sm text-muted-foreground">
         <span>
-          Page {numPages > 0 ? pageNumber : "-"} of {numPages || "-"}
+          Page {numPages > 0 ? visiblePageNumber : "-"} of {numPages || "-"}
         </span>
         <span>{Math.round(scale * 100)}%</span>
       </div>
@@ -178,7 +183,7 @@ export function PdfPreview({ fileName, pdfUrl, onDownload }: PdfPreviewProps) {
           className="flex justify-center"
         >
           <Page
-            pageNumber={pageNumber}
+            pageNumber={visiblePageNumber}
             width={renderedPageWidth}
             renderAnnotationLayer={false}
             renderTextLayer={false}
