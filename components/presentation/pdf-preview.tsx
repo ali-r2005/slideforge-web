@@ -7,6 +7,7 @@ import {
   ChevronRightIcon,
   FileTextIcon,
   Loader2Icon,
+  PanelLeftIcon,
   ZoomInIcon,
   ZoomOutIcon,
 } from "lucide-react"
@@ -37,6 +38,8 @@ export function PdfPreview({
   const [internalPageNumber, setInternalPageNumber] = useState(1)
   const [pageWidth, setPageWidth] = useState(720)
   const [scale, setScale] = useState(1)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+
 
   const visiblePageNumber = pageNumber ?? internalPageNumber
   const canGoBack = visiblePageNumber > 1
@@ -136,27 +139,39 @@ export function PdfPreview({
               <ChevronRightIcon />
             </Button>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleZoomOut}
+                disabled={scale <= 0.75}
+              >
+                <ZoomOutIcon />
+                Zoom out
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleZoomIn}
+                disabled={scale >= 1.75}
+              >
+                <ZoomInIcon />
+                Zoom in
+              </Button>
+            </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:flex">
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              onClick={handleZoomOut}
-              disabled={scale <= 0.75}
+              variant={isSidebarOpen ? "secondary" : "outline"}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="hidden md:flex"
+              title={isSidebarOpen ? "Hide thumbnails" : "Show thumbnails"}
             >
-              <ZoomOutIcon />
-              Zoom out
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleZoomIn}
-              disabled={scale >= 1.75}
-            >
-              <ZoomInIcon />
-              Zoom in
+              <PanelLeftIcon className="size-4" />
             </Button>
           </div>
 
@@ -170,28 +185,67 @@ export function PdfPreview({
         <span>{Math.round(scale * 100)}%</span>
       </div>
 
-      <div
-        ref={previewRef}
-        className="h-[70vh] min-h-[480px] overflow-auto rounded-md border bg-muted p-4"
-      >
-        <Document
-          file={pdfUrl}
-          onLoadSuccess={handleLoadSuccess}
-          loading={<PdfLoadingMessage label="Loading PDF..." />}
-          error={<PdfLoadingMessage label="Unable to load this PDF." />}
-          noData={<PdfLoadingMessage label="No PDF selected." />}
-          className="flex justify-center"
+      <div className="flex gap-4 overflow-hidden rounded-md border bg-muted p-4">
+        {/* Thumbnails Sidebar */}
+        {isSidebarOpen && (
+          <aside className="hidden h-[70vh] w-48 shrink-0 flex-col gap-4 overflow-y-auto pr-2 md:flex">
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={handleLoadSuccess}
+            loading={<div className="text-xs text-muted-foreground">Loading...</div>}
+            className="flex flex-col gap-3"
+          >
+            {Array.from(new Array(numPages), (el, index) => (
+              <div
+                key={`thumb_${index + 1}`}
+                onClick={() => changePage(index + 1)}
+                className={`group relative cursor-pointer overflow-hidden rounded-md border-2 transition-all hover:border-primary/50 ${
+                  visiblePageNumber === index + 1
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-transparent"
+                }`}
+              >
+                <Page
+                  pageNumber={index + 1}
+                  width={160}
+                  renderAnnotationLayer={false}
+                  renderTextLayer={false}
+                  loading={<div className="h-24 w-full bg-muted animate-pulse" />}
+                />
+                <div className="absolute bottom-1 right-1 flex size-5 items-center justify-center rounded-sm bg-background/80 text-[10px] font-medium shadow-sm backdrop-blur-sm">
+                  {index + 1}
+                </div>
+              </div>
+            ))}
+          </Document>
+        </aside>
+        )}
+
+        {/* Main Preview Area */}
+        <div
+          ref={previewRef}
+          className="h-[70vh] flex-1 overflow-auto rounded-md bg-zinc-200/50 p-4 dark:bg-zinc-900/50"
         >
-          <Page
-            pageNumber={visiblePageNumber}
-            width={renderedPageWidth}
-            renderAnnotationLayer={false}
-            renderTextLayer={false}
-            loading={<PdfLoadingMessage label="Loading page..." />}
-            className="overflow-hidden rounded-md bg-background shadow-sm"
-          />
-        </Document>
+          <Document
+            file={pdfUrl}
+            onLoadSuccess={handleLoadSuccess}
+            loading={<PdfLoadingMessage label="Loading PDF..." />}
+            error={<PdfLoadingMessage label="Unable to load this PDF." />}
+            noData={<PdfLoadingMessage label="No PDF selected." />}
+            className="flex justify-center"
+          >
+            <Page
+              pageNumber={visiblePageNumber}
+              width={renderedPageWidth}
+              renderAnnotationLayer={false}
+              renderTextLayer={false}
+              loading={<PdfLoadingMessage label="Loading page..." />}
+              className="overflow-hidden rounded-md bg-background shadow-lg"
+            />
+          </Document>
+        </div>
       </div>
+
     </section>
   )
 }
