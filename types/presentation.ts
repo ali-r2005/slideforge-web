@@ -1,7 +1,9 @@
 export type PresentationTemplate = {
   name: string
   filename: string
+  thumbnail_url?: string
 }
+
 
 export type TemplatesResponse = {
   success: boolean

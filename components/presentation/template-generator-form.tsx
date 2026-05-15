@@ -113,47 +113,85 @@ export function TemplateGeneratorForm() {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="template" className="text-sm font-medium">
-            Template
+        <div className="space-y-4">
+          <label className="text-sm font-medium">
+            Select Template
           </label>
-          <Select
-            value={templateName}
-            onValueChange={setTemplateName}
-            disabled={
-              isLoadingTemplates || isGenerating || templates.length === 0
-            }
-          >
-            <SelectTrigger id="template">
-              <SelectValue
-                placeholder={
-                  isLoadingTemplates ? "Loading templates..." : "Select template"
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((template) => (
-                <SelectItem key={template.filename} value={template.name}>
-                  {template.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          {isLoadingTemplates ? (
+            <div className="flex h-48 items-center justify-center rounded-md border border-dashed">
+              <Loader2Icon className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Loading templates...</span>
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
+              No templates found. Please add .pptx files to the templates folder.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {templates.map((template) => {
+                const isSelected = templateName === template.name
+                const thumbnailUrl = template.thumbnail_url 
+                  ? `${process.env.NEXT_PUBLIC_API_URL}${template.thumbnail_url}`
+                  : null
+
+                return (
+                  <button
+                    key={template.filename}
+                    type="button"
+                    onClick={() => setTemplateName(template.name)}
+                    className={`group relative flex flex-col overflow-hidden rounded-lg border text-left transition-all hover:border-primary/50 hover:shadow-md ${
+                      isSelected 
+                        ? "border-primary ring-2 ring-primary/20" 
+                        : "border-border"
+                    }`}
+                  >
+                    <div className="aspect-[16/10] w-full bg-muted">
+                      {thumbnailUrl ? (
+                        <img 
+                          src={thumbnailUrl} 
+                          alt={template.name}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <PresentationIcon className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h3 className={`text-sm font-medium truncate ${isSelected ? "text-primary" : "text-foreground"}`}>
+                        {template.name}
+                      </h3>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute right-2 top-2 rounded-full bg-primary p-1 text-primary-foreground shadow-sm">
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
           <label htmlFor="prompt" className="text-sm font-medium">
-            Prompt
+            Presentation Topic
           </label>
           <Textarea
             id="prompt"
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             disabled={isGenerating}
-            placeholder="Describe the deck content, audience, tone, and key points."
+            placeholder="e.g., A sales pitch for a new AI startup, focused on investors."
             className="min-h-36 resize-y"
           />
         </div>
+
 
         {errorMessage ? (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
