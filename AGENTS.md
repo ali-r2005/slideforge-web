@@ -80,3 +80,11 @@ Always:
 2. Reuse existing components.
 3. Respect folder structure.
 4. Follow existing naming conventions.
+
+---
+
+# 📝 Documentation Maintenance
+
+- **README Rule**: Every time a new core feature, major UI component (like a new workspace tool), or global state logic is modified, you MUST update the `README.md` to reflect these changes.
+- Ensure the `Project Structure` and `Features` sections remain accurate.
+
