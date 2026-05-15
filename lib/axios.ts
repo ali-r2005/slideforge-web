@@ -9,11 +9,13 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string }>) => {
+  (error: AxiosError<{ message?: string; detail?: string }>) => {
     const message =
+      error.response?.data?.detail ??
       error.response?.data?.message ??
       error.message ??
       "Something went wrong while contacting the server."
+
 
     return Promise.reject(new Error(message))
   }

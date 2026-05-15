@@ -235,12 +235,21 @@ export function PresentationEditorWorkspace({
             </p>
           ) : null}
 
-          <Button type="button" variant="outline" asChild>
-            <a href={pptxUrl} download>
-              <DownloadIcon />
-              Download PPTX
-            </a>
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button type="button" variant="outline" size="sm" asChild>
+              <a href={pptxUrl} download>
+                <DownloadIcon className="size-4" />
+                PPTX
+              </a>
+            </Button>
+            <Button type="button" variant="outline" size="sm" asChild>
+              <a href={pdfUrl} download>
+                <DownloadIcon className="size-4" />
+                PDF
+              </a>
+            </Button>
+          </div>
+
         </div>
       </div>
 
