@@ -135,7 +135,7 @@ export function PresentationEditorWorkspace({
       const replacements: Record<string, string> = {}
       slides.forEach(slide => {
         slide.placeholders.forEach(placeholder => {
-          replacements[placeholder.placeholder] = placeholder.value
+          replacements[placeholder.placeholder] = placeholder.value ?? ""
         })
       })
 
@@ -272,7 +272,8 @@ function PlaceholderField({
 }) {
   const fieldId = `${placeholder.slide_number}-${placeholder.shape_index}-${placeholder.placeholder}`
   const label = formatPlaceholderLabel(placeholder.placeholder)
-  const characterCount = placeholder.value.length
+  const safeValue = placeholder.value ?? ""
+  const characterCount = safeValue.length
 
   return (
     <div className="space-y-2">
@@ -288,7 +289,7 @@ function PlaceholderField({
       {placeholder.type === "paragraph" ? (
         <Textarea
           id={fieldId}
-          value={placeholder.value}
+          value={safeValue}
           maxLength={placeholder.max_chars}
           onChange={(event) => onChange(placeholder, event.target.value)}
           className="min-h-32 resize-y"
@@ -297,7 +298,7 @@ function PlaceholderField({
         <Input
           id={fieldId}
           type="text"
-          value={placeholder.value}
+          value={safeValue}
           maxLength={placeholder.max_chars}
           onChange={(event) => onChange(placeholder, event.target.value)}
         />
