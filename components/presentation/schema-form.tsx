@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Schema, SchemaField } from "@/hooks/useSchema"
+import type { Schema, SchemaField, SchemaGroup } from "@/hooks/useSchema"
 
 interface SchemaFormProps {
   schema: Schema
@@ -110,6 +110,40 @@ export function SchemaForm({ schema, onDataChange }: SchemaFormProps) {
     onDataChange(cleanedData)
   }
 
+  // Organize fields by groups if groups exist
+  const getGroupedFields = useMemo(() => {
+    if (!schema.groups || schema.groups.length === 0) {
+      // No groups - return all fields flat
+      return {
+        ungrouped: schema.fields,
+        groups: []
+      }
+    }
+
+    const groupFieldNames = new Set<string>()
+    const groupedItems: Array<{ group: SchemaGroup; fields: SchemaField[] }> = []
+
+    // Organize fields into groups
+    for (const group of schema.groups) {
+      const groupFields = group.fields
+        .map((fieldName) => schema.fields.find((f) => f.name === fieldName))
+        .filter((field) => field !== undefined) as SchemaField[]
+
+      groupedItems.push({ group, fields: groupFields })
+
+      // Track which fields are in groups
+      group.fields.forEach((name) => groupFieldNames.add(name))
+    }
+
+    // Find ungrouped fields
+    const ungroupedFields = schema.fields.filter((f) => !groupFieldNames.has(f.name))
+
+    return {
+      ungrouped: ungroupedFields,
+      groups: groupedItems
+    }
+  }, [schema])
+
   return (
     <div className="space-y-4">
       <div className="text-sm text-muted-foreground">
@@ -117,15 +151,43 @@ export function SchemaForm({ schema, onDataChange }: SchemaFormProps) {
         <p className="mt-2">Fields marked with * are required</p>
       </div>
 
-      <div className="space-y-4">
-        {schema.fields.map((field) => (
-          <FormField
-            key={field.name}
-            field={field}
-            value={formData[field.name] ?? ""}
-            error={errors[field.name]}
-            onChange={(value) => handleFieldChange(field.name, value)}
-          />
+      <div className="space-y-6">
+        {/* Render ungrouped fields first */}
+        {getGroupedFields.ungrouped.length > 0 && (
+          <div className="space-y-4">
+            {getGroupedFields.ungrouped.map((field) => (
+              <FormField
+                key={field.name}
+                field={field}
+                value={formData[field.name] ?? ""}
+                error={errors[field.name]}
+                onChange={(value) => handleFieldChange(field.name, value)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Render grouped fields */}
+        {getGroupedFields.groups.map(({ group, fields }) => (
+          <div key={group.name} className="space-y-3 rounded-lg border border-border/50 p-4 bg-card/50">
+            <div>
+              <h4 className="font-medium text-sm text-foreground">{group.name}</h4>
+              {group.description && (
+                <p className="text-xs text-muted-foreground mt-1">{group.description}</p>
+              )}
+            </div>
+            <div className="space-y-4 pt-2">
+              {fields.map((field) => (
+                <FormField
+                  key={field.name}
+                  field={field}
+                  value={formData[field.name] ?? ""}
+                  error={errors[field.name]}
+                  onChange={(value) => handleFieldChange(field.name, value)}
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>

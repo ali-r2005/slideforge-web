@@ -14,10 +14,17 @@ export interface SchemaField {
   max_length?: number
 }
 
+export interface SchemaGroup {
+  name: string
+  description?: string
+  fields: string[]
+}
+
 export interface Schema {
   template_name: string
   description?: string
   fields: SchemaField[]
+  groups?: SchemaGroup[]
 }
 
 export function useSchema(templateName: string) {

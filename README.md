@@ -60,7 +60,60 @@ Open [http://localhost:3000](http://localhost:3000) to start generating.
 
 ---
 
+## 📋 Schema-Driven Forms
+
+The frontend automatically renders dynamic forms based on template schemas defined on the backend.
+
+### Form Rendering
+
+When a template has a schema, the `SchemaForm` component:
+1. Loads the schema from `/schema/{template_name}` endpoint
+2. Renders form fields based on field definitions
+3. Validates input in real-time
+4. Groups related fields into organized sections
+5. Provides helpful error messages
+
+### Form Groups
+
+Fields can be organized into logical groups with headers and descriptions:
+
+```typescript
+interface SchemaGroup {
+  name: string              // Group title
+  description?: string      // Optional explanatory text
+  fields: string[]          // Array of field names
+}
+```
+
+Groups appear as styled card sections, making large forms easier to navigate. Example:
+
+```
+┌─────────────────────────────────┐
+│ Contact Information             │
+│ Personal and contact details    │
+├─────────────────────────────────┤
+│ [First Name]                    │
+│ [Last Name]                     │
+│ [Email]                         │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│ Company Details                 │
+│ Business information            │
+├─────────────────────────────────┤
+│ [Company Name]                  │
+│ [Industry]                      │
+│ [Employee Count]                │
+└─────────────────────────────────┘
+```
+
+### Backward Compatibility
+
+- **Templates with schema**: Display dynamic form (schema fields + optional additional context textarea)
+- **Templates without schema**: Display text-only prompt textarea (graceful fallback)
+
 ## 🎨 UI/UX Philosophy
 - **Premium Dark Mode**: Optimized for high-focus creative work.
 - **Glassmorphism**: Modern, sleek interface with subtle transitions.
 - **Fast Feedback**: Immediate visual updates upon content modification.
+- **Smart Form Organization**: Grouped fields reduce cognitive load in complex forms.
