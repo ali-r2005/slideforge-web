@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Loader2Icon, PresentationIcon } from "lucide-react"
 
 import { PresentationEditorWorkspace } from "@/components/presentation/presentation-editor-workspace"
+import { SchemaForm } from "@/components/presentation/schema-form"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -17,6 +18,7 @@ import {
   generatePresentation,
   getTemplates,
 } from "@/services/presentation.service"
+import { useSchema } from "@/hooks/useSchema"
 import type {
   GeneratePresentationResponse,
   PresentationTemplate,
@@ -26,15 +28,24 @@ export function TemplateGeneratorForm() {
   const [templates, setTemplates] = useState<PresentationTemplate[]>([])
   const [templateName, setTemplateName] = useState("")
   const [prompt, setPrompt] = useState("")
+  const [formData, setFormData] = useState<Record<string, string | number | boolean>>({})
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [generatedPresentation, setGeneratedPresentation] =
     useState<GeneratePresentationResponse | null>(null)
 
+  const { schema, hasSchema, isLoading: isLoadingSchema } = useSchema(templateName)
+
   const canGenerate = useMemo(
-    () => templateName.trim().length > 0 && prompt.trim().length > 0,
-    [prompt, templateName]
+    () => {
+      if (templateName.trim().length === 0) return false
+      // If template has schema, form_data must have at least one field
+      if (hasSchema) return Object.keys(formData).length > 0
+      // If no schema, prompt is required
+      return prompt.trim().length > 0
+    },
+    [prompt, templateName, hasSchema, formData]
   )
 
   useEffect(() => {
@@ -72,11 +83,21 @@ export function TemplateGeneratorForm() {
     }
   }, [])
 
+  // Reset form data when template changes
+  useEffect(() => {
+    setFormData({})
+    setPrompt("")
+  }, [templateName])
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!canGenerate) {
-      setErrorMessage("Choose a template and enter a prompt first.")
+      if (hasSchema) {
+        setErrorMessage("Please fill in the required form fields.")
+      } else {
+        setErrorMessage("Choose a template and enter a prompt first.")
+      }
       return
     }
 
@@ -85,10 +106,17 @@ export function TemplateGeneratorForm() {
       setErrorMessage("")
       setGeneratedPresentation(null)
 
-      const generatedPresentationResponse = await generatePresentation({
+      const payload: Parameters<typeof generatePresentation>[0] = {
         template_name: templateName,
-        prompt,
-      })
+      }
+
+      if (hasSchema) {
+        payload.form_data = formData
+      } else {
+        payload.prompt = prompt
+      }
+
+      const generatedPresentationResponse = await generatePresentation(payload)
 
       setGeneratedPresentation(generatedPresentationResponse)
     } catch (error) {
@@ -178,19 +206,50 @@ export function TemplateGeneratorForm() {
           )}
         </div>
 
-        <div className="space-y-2">
-          <label htmlFor="prompt" className="text-sm font-medium">
-            Presentation Topic
-          </label>
-          <Textarea
-            id="prompt"
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            disabled={isGenerating}
-            placeholder="e.g., A sales pitch for a new AI startup, focused on investors."
-            className="min-h-36 resize-y"
-          />
-        </div>
+        {templateName && isLoadingSchema ? (
+          <div className="flex items-center justify-center p-4">
+            <Loader2Icon className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Loading template settings...</span>
+          </div>
+        ) : hasSchema && schema ? (
+          <>
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Template Settings</h3>
+              <SchemaForm
+                schema={schema}
+                onDataChange={setFormData}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="prompt" className="text-sm font-medium text-muted-foreground">
+                Additional Context (Optional)
+              </label>
+              <Textarea
+                id="prompt"
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                disabled={isGenerating}
+                placeholder="Add any additional context or instructions for the presentation..."
+                className="min-h-24 resize-y"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <label htmlFor="prompt" className="text-sm font-medium">
+              Presentation Topic
+            </label>
+            <Textarea
+              id="prompt"
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              disabled={isGenerating}
+              placeholder="e.g., A sales pitch for a new AI startup, focused on investors."
+              className="min-h-36 resize-y"
+            />
+          </div>
+        )}
 
 
         {errorMessage ? (

@@ -18,6 +18,13 @@ export async function getTemplates(): Promise<PresentationTemplate[]> {
   return response.data.data
 }
 
+export async function getSchema(templateName: string) {
+  const response = await apiClient.get(`/schema/${templateName}`)
+  console.log("Schema response:", response.data)
+
+  return response.data
+}
+
 export async function generatePresentation(
   payload: GeneratePresentationPayload
 ): Promise<GeneratePresentationResponse> {

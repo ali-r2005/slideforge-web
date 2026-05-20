@@ -12,7 +12,8 @@ export type TemplatesResponse = {
 
 export type GeneratePresentationPayload = {
   template_name: string
-  prompt: string
+  prompt?: string
+  form_data?: Record<string, string | number | boolean>
 }
 
 export type PresentationPlaceholderType = "title" | "paragraph" | "table" | "bullet_list" | "subtitle" | "text" | "image_logo" | "image_topic"
