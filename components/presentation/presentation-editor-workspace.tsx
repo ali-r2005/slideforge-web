@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { TableField } from "@/components/presentation/table-field"
 import { createApiFileUrl } from "@/lib/api-url"
 import {
   updatePresentation,
@@ -100,7 +101,7 @@ export function PresentationEditorWorkspace({
 
   function handlePlaceholderChange(
     placeholderToUpdate: PresentationPlaceholder,
-    value: string
+    value: string | Record<string, string>[]
   ) {
     setUpdateMessage("")
     setSlides((currentSlides) =>
@@ -116,7 +117,10 @@ export function PresentationEditorWorkspace({
               placeholder.placeholder === placeholderToUpdate.placeholder &&
               placeholder.shape_index === placeholderToUpdate.shape_index
 
-            return isTargetPlaceholder ? { ...placeholder, value } : placeholder
+            // Convert table data to JSON string for storage
+            const processedValue = Array.isArray(value) ? JSON.stringify(value) : value
+
+            return isTargetPlaceholder ? { ...placeholder, value: processedValue } : placeholder
           }),
         }
       })
@@ -135,7 +139,9 @@ export function PresentationEditorWorkspace({
       const replacements: Record<string, string> = {}
       slides.forEach(slide => {
         slide.placeholders.forEach(placeholder => {
-          replacements[placeholder.placeholder] = placeholder.value ?? ""
+          const value = placeholder.value ?? ""
+          // Convert non-string values to JSON
+          replacements[placeholder.placeholder] = typeof value === "string" ? value : JSON.stringify(value)
         })
       })
 
@@ -194,9 +200,9 @@ export function PresentationEditorWorkspace({
 
         {selectedSlide ? (
           <div className="flex flex-col gap-4">
-            {selectedSlide.placeholders.map((placeholder) => (
+            {selectedSlide.placeholders.map((placeholder, idx) => (
               <PlaceholderField
-                key={`${placeholder.placeholder}-${placeholder.shape_index}`}
+                key={`${placeholder.slide_number}-${placeholder.shape_index}-${placeholder.type}-${idx}`}
                 placeholder={placeholder}
                 onChange={handlePlaceholderChange}
               />
@@ -268,13 +274,28 @@ function PlaceholderField({
   onChange,
 }: {
   placeholder: PresentationPlaceholder
-  onChange: (placeholder: PresentationPlaceholder, value: string) => void
+  onChange: (placeholder: PresentationPlaceholder, value: string | Record<string, string>[]) => void
 }) {
   const fieldId = `${placeholder.slide_number}-${placeholder.shape_index}-${placeholder.placeholder}`
   const label = formatPlaceholderLabel(placeholder.placeholder)
   const safeValue = placeholder.value ?? ""
-  const characterCount = safeValue.length
+  const characterCount = typeof safeValue === "string" ? safeValue.length : 0
 
+  // Get column headers if this is a table
+  const columnHeaders = (placeholder as any).column_headers ?? []
+
+  // Render table field if this is a table
+  if (placeholder.type === "table") {
+    return (
+      <TableField
+        placeholder={placeholder}
+        columnHeaders={columnHeaders}
+        onChange={onChange}
+      />
+    )
+  }
+
+  // Render regular field for non-table placeholders
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
@@ -289,7 +310,7 @@ function PlaceholderField({
       {placeholder.type === "paragraph" ? (
         <Textarea
           id={fieldId}
-          value={safeValue}
+          value={typeof safeValue === "string" ? safeValue : ""}
           maxLength={placeholder.max_chars}
           onChange={(event) => onChange(placeholder, event.target.value)}
           className="min-h-32 resize-y"
@@ -298,7 +319,7 @@ function PlaceholderField({
         <Input
           id={fieldId}
           type="text"
-          value={safeValue}
+          value={typeof safeValue === "string" ? safeValue : ""}
           maxLength={placeholder.max_chars}
           onChange={(event) => onChange(placeholder, event.target.value)}
         />

@@ -15,7 +15,7 @@ export type GeneratePresentationPayload = {
   prompt: string
 }
 
-export type PresentationPlaceholderType = "title" | "paragraph"
+export type PresentationPlaceholderType = "title" | "paragraph" | "table" | "bullet_list" | "subtitle" | "text" | "image_logo" | "image_topic"
 
 export type PresentationPlaceholder = {
   placeholder: string
@@ -23,7 +23,10 @@ export type PresentationPlaceholder = {
   shape_index: number
   type: PresentationPlaceholderType
   max_chars: number
-  value: string
+  value: string | Record<string, string>[] | string[]
+  paragraphs?: number
+  column_headers?: string[]
+  columns?: number
 }
 
 export type PresentationSlideData = {
