@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react"
 import { apiClient } from "@/services/api"
 
+export interface CellStructure {
+  parts: ("context" | "team_building" | "agency_offer")[]
+  ai_generates?: string[]
+  user_provides?: string[]
+  team_building_db?: boolean
+}
+
 export interface SchemaField {
   name: string
-  type: "text" | "textarea" | "number" | "email" | "date" | "enum" | "boolean"
+  type: "text" | "textarea" | "number" | "email" | "date" | "enum" | "boolean" | "program_table"
   required: boolean
   label?: string
   description?: string
@@ -12,6 +19,11 @@ export interface SchemaField {
   max?: number
   min_length?: number
   max_length?: number
+  // program_table specific properties
+  date_range_start_field?: string
+  date_range_end_field?: string
+  columns?: string[]
+  cell_structure?: CellStructure
 }
 
 export interface SchemaGroup {

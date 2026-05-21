@@ -84,6 +84,26 @@ export function PresentationEditorWorkspace({
   )
 
 
+  async function handleDownload(url: string, fileType: "pdf" | "pptx") {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error("Download failed")
+
+      const blob = await response.blob()
+      const fileUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = fileUrl
+      link.download = `presentation.${fileType}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(fileUrl)
+    } catch (err) {
+      console.error(`Failed to download ${fileType}:`, err)
+      setError(`Failed to download ${fileType.toUpperCase()}`)
+    }
+  }
+
   function handleSlideSelect(slideNumber: string) {
     setSelectedSlideNumber(Number(slideNumber))
     setUpdateMessage("")
@@ -242,17 +262,23 @@ export function PresentationEditorWorkspace({
           ) : null}
 
           <div className="grid grid-cols-2 gap-3">
-            <Button type="button" variant="outline" size="sm" asChild>
-              <a href={pptxUrl} download>
-                <DownloadIcon className="size-4" />
-                PPTX
-              </a>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleDownload(pptxUrl, "pptx")}
+            >
+              <DownloadIcon className="size-4" />
+              PPTX
             </Button>
-            <Button type="button" variant="outline" size="sm" asChild>
-              <a href={pdfUrl} download>
-                <DownloadIcon className="size-4" />
-                PDF
-              </a>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleDownload(pdfUrl, "pdf")}
+            >
+              <DownloadIcon className="size-4" />
+              PDF
             </Button>
           </div>
 
