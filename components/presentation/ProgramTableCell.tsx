@@ -91,6 +91,13 @@ export function ProgramTableCell({
   }
 
   const handleTeamBuildingChange = (activityId: string) => {
+    if (activityId === "clear") {
+      // Clear selection
+      const updated = buildCellData({ team_building: undefined })
+      onChange(updated)
+      return
+    }
+
     const selectedActivity = teamBuildingActivities.find(
       (a) => a.id === parseInt(activityId)
     )
@@ -207,6 +214,9 @@ export function ProgramTableCell({
                   <SelectValue placeholder="Select activity (optional)" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="clear">
+                    <span className="text-muted-foreground">Clear selection</span>
+                  </SelectItem>
                   {teamBuildingActivities.map((activity) => (
                     <SelectItem
                       key={activity.id}
