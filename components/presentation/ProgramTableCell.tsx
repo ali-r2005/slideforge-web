@@ -14,7 +14,6 @@ import type { CellStructure, SchemaField } from "@/hooks/useSchema"
 import type { TeamBuildingActivity } from "@/hooks/useTeamBuilding"
 
 interface ProgramTableCellData {
-  context_prompt?: string
   context?: string[]
   team_building?: {
     id?: number
@@ -23,7 +22,6 @@ interface ProgramTableCellData {
     description?: string
     les_plus?: string[]
   }
-  agency_offer_request?: string
   agency_offer?: string[]
 }
 
@@ -68,25 +66,36 @@ export function ProgramTableCell({
     const cleaned: ProgramTableCellData = {}
 
     // Only include fields with actual content
-    if (merged.context_prompt?.trim()) {
-      cleaned.context_prompt = merged.context_prompt
-    }
     if (merged.team_building?.name) {
       cleaned.team_building = merged.team_building
     }
-    if (merged.agency_offer_request?.trim()) {
-      cleaned.agency_offer_request = merged.agency_offer_request
+    if (merged.agency_offer?.length) {
       cleaned.agency_offer = merged.agency_offer
     }
     if (merged.context?.length) {
+      // Keep all context items including empty ones (user may be actively editing)
       cleaned.context = merged.context
     }
 
     return cleaned
   }
 
-  const handleContextPromptChange = (value: string) => {
-    const updated = buildCellData({ context_prompt: value })
+  const handleContextChange = (index: number, value: string) => {
+    const newContext = [...(cellData.context || [])]
+    newContext[index] = value
+    const updated = buildCellData({ context: newContext })
+    onChange(updated)
+  }
+
+  const handleAddContextParagraph = () => {
+    const newContext = [...(cellData.context || []), ""]
+    const updated = buildCellData({ context: newContext })
+    onChange(updated)
+  }
+
+  const handleRemoveContextParagraph = (index: number) => {
+    const newContext = (cellData.context || []).filter((_, i) => i !== index)
+    const updated = buildCellData({ context: newContext })
     onChange(updated)
   }
 
@@ -117,7 +126,6 @@ export function ProgramTableCell({
 
   const handleAgencyOfferChange = (value: string) => {
     const updated = buildCellData({
-      agency_offer_request: value,
       agency_offer: value
         .split("\n")
         .filter((line) => line.trim() !== ""),
@@ -175,25 +183,44 @@ export function ProgramTableCell({
       case "context":
         return (
           cellStructure.parts.includes("context") && (
-            <div className="space-y-1">
+            <div className="space-y-2">
               <label className="text-xs font-medium text-foreground flex items-center">
-                Context/Setup
+                Context/Setup (Paragraphs)
                 {getFieldIndicator(hasContext)}
               </label>
-              <Textarea
-                value={cellData.context_prompt || ""}
-                onChange={(e) => handleContextPromptChange(e.target.value)}
-                placeholder="Describe the context or setup for this time slot..."
-                className="min-h-16 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              {cellData.context && cellData.context.length > 0 && (
-                <div className="p-2 bg-muted/30 rounded">
-                  <p className="text-xs font-medium mb-1 text-muted-foreground">
-                    Generated:
-                  </p>
-                  {renderArrayWithLineBreaks(cellData.context)}
-                </div>
-              )}
+
+              {/* Input textareas for context paragraphs */}
+              <div className="space-y-2">
+                {(cellData.context || []).map((paragraph, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground">Paragraph {idx + 1}</span>
+                      {cellData.context && cellData.context.length > 1 && (
+                        <button
+                          onClick={() => handleRemoveContextParagraph(idx)}
+                          className="px-2 py-1 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 rounded"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <Textarea
+                      value={paragraph}
+                      onChange={(e) => handleContextChange(idx, e.target.value)}
+                      placeholder={`Paragraph ${idx + 1}: Describe activities, setup, or logistics...`}
+                      className="min-h-12 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Add paragraph button */}
+              <button
+                onClick={handleAddContextParagraph}
+                className="w-full px-3 py-2 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded font-medium"
+              >
+                + Add Paragraph
+              </button>
             </div>
           )
         )
@@ -240,7 +267,7 @@ export function ProgramTableCell({
                 {getFieldIndicator(hasOffers)}
               </label>
               <Textarea
-                value={cellData.agency_offer_request || ""}
+                value={(cellData.agency_offer || []).join("\n")}
                 onChange={(e) => handleAgencyOfferChange(e.target.value)}
                 placeholder="Enter offers (one per line)..."
                 className="min-h-12 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -266,9 +293,9 @@ export function ProgramTableCell({
   }
 
   // Check which fields have content
-  const hasContext = cellData.context_prompt?.trim() !== ""
+  const hasContext = (cellData.context?.length ?? 0) > 0
   const hasTeamBuilding = !!cellData.team_building?.name
-  const hasOffers = cellData.agency_offer_request?.trim() !== ""
+  const hasOffers = (cellData.agency_offer?.length ?? 0) > 0
 
   const getFieldIndicator = (hasContent: boolean) => {
     return hasContent ? (

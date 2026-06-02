@@ -281,10 +281,8 @@ function ProgramTable({ field, value, schema, formData, onChange }: ProgramTable
           columns.forEach((col) => {
             if (hasCellStructure) {
               row[col] = {
-                context_prompt: "",
-                context: [],
+                context: [""],
                 team_building: null,
-                agency_offer_request: "",
                 agency_offer: [],
               }
             } else {
