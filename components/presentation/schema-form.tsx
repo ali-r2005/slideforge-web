@@ -280,11 +280,18 @@ function ProgramTable({ field, value, schema, formData, onChange }: ProgramTable
           const row: Record<string, any> = { date }
           columns.forEach((col) => {
             if (hasCellStructure) {
-              row[col] = {
-                context: [""],
-                team_building: null,
-                agency_offer: [],
-              }
+              // Initialize cell dynamically based on cell_structure.parts
+              const cellData: Record<string, any> = {}
+              field.cell_structure?.parts.forEach((part) => {
+                if (part.type === "array-textarea") {
+                  cellData[part.name] = [""]
+                } else if (part.type === "select") {
+                  cellData[part.name] = null
+                } else {
+                  cellData[part.name] = ""
+                }
+              })
+              row[col] = cellData
             } else {
               row[col] = ""
             }

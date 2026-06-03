@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react"
 import { apiClient } from "@/services/api"
 
+export interface CellPart {
+  name: string
+  type: "array-textarea" | "select" | "text" | "textarea"
+  label: string
+  required?: boolean
+  ai_generates?: boolean
+  user_provides?: boolean
+  database?: string
+  options?: Array<{ id: number; name: string }>
+}
+
 export interface CellStructure {
-  parts: ("context" | "team_building" | "agency_offer")[]
-  ai_generates?: string[]
-  user_provides?: string[]
-  team_building_db?: boolean
+  draggable: boolean
+  parts: CellPart[]
 }
 
 export interface SchemaField {

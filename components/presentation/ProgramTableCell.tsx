@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
@@ -10,131 +10,84 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { GripVertical } from "lucide-react"
-import type { CellStructure, SchemaField } from "@/hooks/useSchema"
-import type { TeamBuildingActivity } from "@/hooks/useTeamBuilding"
-
-interface ProgramTableCellData {
-  context?: string[]
-  team_building?: {
-    id?: number
-    name: string
-    slogan?: string
-    description?: string
-    les_plus?: string[]
-  }
-  agency_offer?: string[]
-}
+import type { CellStructure, CellPart } from "@/hooks/useSchema"
 
 interface ProgramTableCellProps {
   columnName: string
-  cellData: ProgramTableCellData
+  cellData: Record<string, any>
   cellStructure: CellStructure
-  teamBuildingActivities: TeamBuildingActivity[]
-  onChange: (newData: ProgramTableCellData) => void
+  onChange: (newData: Record<string, any>) => void
   rowHeight?: number
 }
-
-type SectionType = "context" | "team_building" | "offers"
 
 export function ProgramTableCell({
   columnName,
   cellData,
   cellStructure,
-  teamBuildingActivities,
   onChange,
   rowHeight,
 }: ProgramTableCellProps) {
   const [expanded, setExpanded] = useState(true)
-  const [sectionOrder, setSectionOrder] = useState<SectionType[]>([
-    "context",
-    "team_building",
-    "offers",
-  ])
-  const [draggedSection, setDraggedSection] = useState<SectionType | null>(null)
+  const [draggedPart, setDraggedPart] = useState<string | null>(null)
+  const [partOrder, setPartOrder] = useState<string[]>(
+    cellStructure.parts.map((p) => p.name)
+  )
 
-  // Initialize section order based on cellStructure
-  useEffect(() => {
-    const newOrder: SectionType[] = []
-    if (cellStructure.parts.includes("context")) newOrder.push("context")
-    if (cellStructure.parts.includes("team_building")) newOrder.push("team_building")
-    if (cellStructure.parts.includes("agency_offer")) newOrder.push("offers")
-    setSectionOrder(newOrder)
-  }, [cellStructure])
-
-  const buildCellData = (updates: Partial<ProgramTableCellData>): ProgramTableCellData => {
+  const buildCellData = (updates: Record<string, any>): Record<string, any> => {
     const merged = { ...cellData, ...updates }
-    const cleaned: ProgramTableCellData = {}
+    const cleaned: Record<string, any> = {}
 
-    // Only include fields with actual content
-    if (merged.team_building?.name) {
-      cleaned.team_building = merged.team_building
-    }
-    if (merged.agency_offer?.length) {
-      cleaned.agency_offer = merged.agency_offer
-    }
-    if (merged.context?.length) {
-      // Keep all context items including empty ones (user may be actively editing)
-      cleaned.context = merged.context
+    // Include only parts that have content or are defined in schema
+    for (const part of cellStructure.parts) {
+      const value = merged[part.name]
+
+      // Include if has value, or if it's required or user provides it
+      if (value || part.required || part.user_provides) {
+        if (part.type === "array-textarea") {
+          // Keep all array items including empty ones (user may be editing)
+          if (Array.isArray(value)) {
+            cleaned[part.name] = value
+          } else if (value === undefined && (part.required || part.user_provides)) {
+            cleaned[part.name] = [""]
+          }
+        } else {
+          cleaned[part.name] = value
+        }
+      }
     }
 
     return cleaned
   }
 
-  const handleContextChange = (index: number, value: string) => {
-    const newContext = [...(cellData.context || [])]
-    newContext[index] = value
-    const updated = buildCellData({ context: newContext })
+  const handlePartChange = (partName: string, value: any) => {
+    const updated = buildCellData({ [partName]: value })
     onChange(updated)
   }
 
-  const handleAddContextParagraph = () => {
-    const newContext = [...(cellData.context || []), ""]
-    const updated = buildCellData({ context: newContext })
+  const handleAddArrayItem = (partName: string) => {
+    const currentArray = cellData[partName] || []
+    const newArray = [...currentArray, ""]
+    const updated = buildCellData({ [partName]: newArray })
     onChange(updated)
   }
 
-  const handleRemoveContextParagraph = (index: number) => {
-    const newContext = (cellData.context || []).filter((_, i) => i !== index)
-    const updated = buildCellData({ context: newContext })
+  const handleRemoveArrayItem = (partName: string, index: number) => {
+    const currentArray = cellData[partName] || []
+    const newArray = currentArray.filter((_: any, i: number) => i !== index)
+    const updated = buildCellData({ [partName]: newArray })
     onChange(updated)
   }
 
-  const handleTeamBuildingChange = (activityId: string) => {
-    if (activityId === "clear") {
-      // Clear selection
-      const updated = buildCellData({ team_building: undefined })
-      onChange(updated)
-      return
-    }
-
-    const selectedActivity = teamBuildingActivities.find(
-      (a) => a.id === parseInt(activityId)
-    )
-    const updated = buildCellData({
-      team_building: selectedActivity
-        ? {
-            id: selectedActivity.id,
-            name: selectedActivity.name,
-            slogan: selectedActivity.keywords?.[0] || "",
-            description: selectedActivity.objectives.join(", "),
-            les_plus: selectedActivity.les_plus,
-          }
-        : undefined,
-    })
+  const handleArrayItemChange = (partName: string, index: number, value: string) => {
+    const currentArray = cellData[partName] || []
+    const newArray = [...currentArray]
+    newArray[index] = value
+    const updated = buildCellData({ [partName]: newArray })
     onChange(updated)
   }
 
-  const handleAgencyOfferChange = (value: string) => {
-    const updated = buildCellData({
-      agency_offer: value
-        .split("\n")
-        .filter((line) => line.trim() !== ""),
-    })
-    onChange(updated)
-  }
-
-  const handleDragStart = (section: SectionType) => {
-    setDraggedSection(section)
+  const handleDragStart = (partName: string) => {
+    setDraggedPart(partName)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -142,168 +95,144 @@ export function ProgramTableCell({
     e.dataTransfer.dropEffect = "move"
   }
 
-  const handleDrop = (targetSection: SectionType) => {
-    if (!draggedSection || draggedSection === targetSection) {
-      setDraggedSection(null)
+  const handleDrop = (targetPart: string) => {
+    if (!draggedPart || draggedPart === targetPart || !cellStructure.draggable) {
+      setDraggedPart(null)
       return
     }
 
-    const newOrder = [...sectionOrder]
-    const draggedIndex: number = newOrder.indexOf(draggedSection)
-    const targetIdx: number = newOrder.indexOf(targetSection)
+    const newOrder = [...partOrder]
+    const draggedIdx = newOrder.indexOf(draggedPart)
+    const targetIdx = newOrder.indexOf(targetPart)
 
-    // Swap positions
-    if (draggedIndex !== -1 && targetIdx !== -1) {
-      const temp = newOrder[draggedIndex]
-      newOrder[draggedIndex] = newOrder[targetIdx]
+    if (draggedIdx !== -1 && targetIdx !== -1) {
+      const temp = newOrder[draggedIdx]
+      newOrder[draggedIdx] = newOrder[targetIdx]
       newOrder[targetIdx] = temp
+      setPartOrder(newOrder)
     }
 
-    setSectionOrder(newOrder)
-    setDraggedSection(null)
+    setDraggedPart(null)
   }
 
   const handleDragEnd = () => {
-    setDraggedSection(null)
+    setDraggedPart(null)
   }
 
-  const renderArrayWithLineBreaks = (arr: string[] | undefined) => {
-    if (!arr || arr.length === 0) return null
-    return (
-      <div className="text-xs text-muted-foreground space-y-1">
-        {arr.map((item, i) => (
-          <div key={i}>{item}</div>
-        ))}
-      </div>
-    )
-  }
+  const renderPartContent = (part: CellPart) => {
+    const value = cellData[part.name]
 
-  const renderSection = (section: SectionType) => {
-    switch (section) {
-      case "context":
+    switch (part.type) {
+      case "array-textarea":
         return (
-          cellStructure.parts.includes("context") && (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-foreground flex items-center">
+              {part.label} (Paragraphs)
+              {value && Array.isArray(value) && value.length > 0 && (
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500 ml-1" title="Has content" />
+              )}
+            </label>
+
+            {/* Input textareas for array items */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-foreground flex items-center">
-                Context/Setup (Paragraphs)
-                {getFieldIndicator(hasContext)}
-              </label>
-
-              {/* Input textareas for context paragraphs */}
-              <div className="space-y-2">
-                {(cellData.context || []).map((paragraph, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Paragraph {idx + 1}</span>
-                      {cellData.context && cellData.context.length > 1 && (
-                        <button
-                          onClick={() => handleRemoveContextParagraph(idx)}
-                          className="px-2 py-1 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 rounded"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <Textarea
-                      value={paragraph}
-                      onChange={(e) => handleContextChange(idx, e.target.value)}
-                      placeholder={`Paragraph ${idx + 1}: Describe activities, setup, or logistics...`}
-                      className="min-h-12 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
+              {(Array.isArray(value) ? value : []).map((item, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">Item {idx + 1}</span>
+                    {Array.isArray(value) && value.length > 1 && (
+                      <button
+                        onClick={() => handleRemoveArrayItem(part.name, idx)}
+                        className="px-2 py-1 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 rounded"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
-
-              {/* Add paragraph button */}
-              <button
-                onClick={handleAddContextParagraph}
-                className="w-full px-3 py-2 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded font-medium"
-              >
-                + Add Paragraph
-              </button>
+                  <Textarea
+                    value={item || ""}
+                    onChange={(e) => handleArrayItemChange(part.name, idx, e.target.value)}
+                    placeholder={`Item ${idx + 1}: Enter text...`}
+                    className="min-h-12 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              ))}
             </div>
-          )
+
+            {/* Add item button */}
+            <button
+              onClick={() => handleAddArrayItem(part.name)}
+              className="w-full px-3 py-2 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded font-medium"
+            >
+              + Add Item
+            </button>
+          </div>
         )
 
-      case "team_building":
+      case "select":
         return (
-          cellStructure.parts.includes("team_building") && (
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground flex items-center">
-                Team Building
-                {getFieldIndicator(hasTeamBuilding)}
-              </label>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground flex items-center">
+              {part.label}
+              {value && <span className="inline-block w-2 h-2 rounded-full bg-green-500 ml-1" title="Has content" />}
+            </label>
+            <div className="flex gap-2">
               <Select
-                value={cellData.team_building?.id?.toString() || ""}
-                onValueChange={handleTeamBuildingChange}
+                value={value?.id?.toString() || ""}
+                onValueChange={(optionId) => {
+                  const selected = part.options?.find((opt) => opt.id === parseInt(optionId))
+                  handlePartChange(part.name, selected ? { id: selected.id, name: selected.name } : null)
+                }}
               >
-                <SelectTrigger className="text-xs h-8">
-                  <SelectValue placeholder="Select activity (optional)" />
+                <SelectTrigger className="text-xs h-8 flex-1">
+                  <SelectValue placeholder={`Select ${part.label.toLowerCase()}...`} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="clear">
-                    <span className="text-muted-foreground">Clear selection</span>
-                  </SelectItem>
-                  {teamBuildingActivities.map((activity) => (
-                    <SelectItem
-                      key={activity.id}
-                      value={activity.id.toString()}
-                    >
-                      {activity.name}
+                  {part.options?.map((option) => (
+                    <SelectItem key={option.id} value={option.id.toString()}>
+                      {option.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )
-        )
-
-      case "offers":
-        return (
-          cellStructure.parts.includes("agency_offer") && (
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-foreground flex items-center">
-                Agency Offers
-                {getFieldIndicator(hasOffers)}
-              </label>
-              <Textarea
-                value={(cellData.agency_offer || []).join("\n")}
-                onChange={(e) => handleAgencyOfferChange(e.target.value)}
-                placeholder="Enter offers (one per line)..."
-                className="min-h-12 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              {cellData.agency_offer && cellData.agency_offer.length > 0 && (
-                <div className="p-2 bg-muted/30 rounded">
-                  <p className="text-xs font-medium mb-1 text-muted-foreground">
-                    Items:
-                  </p>
-                  {renderArrayWithLineBreaks(cellData.agency_offer)}
-                </div>
+              {value && (
+                <button
+                  onClick={() => handlePartChange(part.name, null)}
+                  className="px-2 py-1 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 rounded"
+                  title="Clear selection"
+                >
+                  ✕
+                </button>
               )}
             </div>
-          )
+          </div>
         )
+
+      case "text":
+      case "textarea":
+        return (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-foreground flex items-center">
+              {part.label}
+              {value && <span className="inline-block w-2 h-2 rounded-full bg-green-500 ml-1" title="Has content" />}
+            </label>
+            <Textarea
+              value={value || ""}
+              onChange={(e) => handlePartChange(part.name, e.target.value)}
+              placeholder={`Enter ${part.label.toLowerCase()}...`}
+              className="min-h-12 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        )
+
+      default:
+        return <div className="text-xs text-muted-foreground">Unsupported part type: {part.type}</div>
     }
   }
 
-  const sectionLabels: Record<SectionType, string> = {
-    context: "Context/Setup",
-    team_building: "Team Building",
-    offers: "Agency Offers",
-  }
-
-  // Check which fields have content
-  const hasContext = (cellData.context?.length ?? 0) > 0
-  const hasTeamBuilding = !!cellData.team_building?.name
-  const hasOffers = (cellData.agency_offer?.length ?? 0) > 0
-
-  const getFieldIndicator = (hasContent: boolean) => {
-    return hasContent ? (
-      <span className="inline-block w-2 h-2 rounded-full bg-green-500 ml-1" title="Has content" />
-    ) : (
-      <span className="inline-block w-2 h-2 rounded-full bg-gray-300 ml-1" title="Empty" />
-    )
-  }
+  // Get parts in current order
+  const orderedParts = cellStructure.draggable
+    ? partOrder.map((name) => cellStructure.parts.find((p) => p.name === name)).filter(Boolean) as CellPart[]
+    : cellStructure.parts
 
   return (
     <div className="space-y-2 p-2 bg-card rounded border border-border/50">
@@ -313,45 +242,55 @@ export function ProgramTableCell({
         onClick={() => setExpanded(!expanded)}
       >
         <h5 className="font-medium text-sm">{columnName}</h5>
-        <span className="text-xs text-muted-foreground">
-          {expanded ? "▼" : "▶"}
-        </span>
+        <span className="text-xs text-muted-foreground">{expanded ? "▼" : "▶"}</span>
       </div>
 
       {/* Expanded content with draggable sections */}
       {expanded && (
         <div className="space-y-3 pt-2 border-t">
-          {sectionOrder.map((section) => (
+          {orderedParts.map((part) => (
             <div
-              key={section}
-              draggable
-              onDragStart={() => handleDragStart(section)}
+              key={part.name}
+              draggable={cellStructure.draggable}
+              onDragStart={() => handleDragStart(part.name)}
               onDragOver={handleDragOver}
-              onDrop={() => handleDrop(section)}
+              onDrop={() => handleDrop(part.name)}
               onDragEnd={handleDragEnd}
-              className={`p-3 rounded border transition-all cursor-move ${
-                draggedSection === section
+              className={`p-3 rounded border transition-all ${
+                cellStructure.draggable ? "cursor-move" : ""
+              } ${
+                draggedPart === part.name
                   ? "bg-blue-50 border-blue-300 dark:bg-blue-950/30 dark:border-blue-700 opacity-50"
                   : "bg-muted/20 border-border/50 hover:bg-muted/40"
               }`}
             >
               {/* Drag Handle */}
-              <div className="flex items-center gap-2 mb-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  {sectionLabels[section]}
-                </span>
-              </div>
+              {cellStructure.draggable && (
+                <div className="flex items-center gap-2 mb-2">
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {part.label}
+                  </span>
+                </div>
+              )}
 
-              {/* Section Content */}
-              <div className="ml-6">{renderSection(section)}</div>
+              {!cellStructure.draggable && (
+                <div className="mb-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {part.label}
+                  </span>
+                </div>
+              )}
+
+              {/* Part Content */}
+              <div className={cellStructure.draggable ? "ml-6" : ""}>{renderPartContent(part)}</div>
             </div>
           ))}
         </div>
       )}
 
       {/* Info about draggable order */}
-      {expanded && sectionOrder.length > 1 && (
+      {expanded && cellStructure.draggable && orderedParts.length > 1 && (
         <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-700/30">
           <p className="text-xs text-amber-800 dark:text-amber-200">
             💡 Drag sections to reorder them. The AI will generate content in this order.
