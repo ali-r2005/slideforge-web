@@ -11,8 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Schema, SchemaField, SchemaGroup } from "@/hooks/useSchema"
-import { useTeamBuilding } from "@/hooks/useTeamBuilding"
-import { ProgramTableCell } from "./ProgramTableCell"
+import { TableCellHandler } from "./TableCellHandler"
 
 interface SchemaFormProps {
   schema: Schema
@@ -89,8 +88,8 @@ export function SchemaForm({ schema, onDataChange }: SchemaFormProps) {
     const newFormData = { ...formData, [fieldName]: value }
     setFormData(newFormData)
 
-    // Validate (skip validation for program_table - handled server-side)
-    if (field.type !== "program_table") {
+    // Validate (skip validation for table types - handled server-side)
+    if (field.type !== "table" && field.cell_structure === undefined) {
       const error = validateField(field, value)
       const newErrors = { ...errors }
       if (error) {
@@ -163,7 +162,7 @@ export function SchemaForm({ schema, onDataChange }: SchemaFormProps) {
               <FormField
                 key={field.name}
                 field={field}
-                value={formData[field.name] ?? (field.type === "program_table" ? [] : "")}
+                value={formData[field.name] ?? ((field.type === "table" || field.cell_structure) ? [] : "")}
                 error={errors[field.name]}
                 onChange={(value) => handleFieldChange(field.name, value)}
                 schema={schema}
@@ -187,7 +186,7 @@ export function SchemaForm({ schema, onDataChange }: SchemaFormProps) {
                 <FormField
                   key={field.name}
                   field={field}
-                  value={formData[field.name] ?? (field.type === "program_table" ? [] : "")}
+                  value={formData[field.name] ?? ((field.type === "table" || field.cell_structure) ? [] : "")}
                   error={errors[field.name]}
                   onChange={(value) => handleFieldChange(field.name, value)}
                   schema={schema}
@@ -215,7 +214,6 @@ function ProgramTable({ field, value, schema, formData, onChange }: ProgramTable
   const [isResizing, setIsResizing] = useState<number | null>(null)
   const [resizeStart, setResizeStart] = useState(0)
 
-  const { activities: teamBuildingActivities } = useTeamBuilding()
   const hasCellStructure = field.cell_structure !== undefined
 
   const generateDateRange = (startStr: string, endStr: string): string[] => {
@@ -381,11 +379,10 @@ function ProgramTable({ field, value, schema, formData, onChange }: ProgramTable
                   {columns.map((col) => (
                     <td key={col} className="px-4 py-3">
                       {hasCellStructure && field.cell_structure ? (
-                        <ProgramTableCell
+                        <TableCellHandler
                           columnName={formatLabel(col)}
                           cellData={typeof row[col] === "object" && row[col] !== null ? row[col] : {}}
                           cellStructure={field.cell_structure}
-                          teamBuildingActivities={teamBuildingActivities}
                           onChange={(newData) =>
                             handleCellChange(dateIndex, col, newData)
                           }
@@ -523,7 +520,7 @@ function FormField({ field, value, error, onChange, schema, formData = {} }: For
         </div>
       )}
 
-      {field.type === "program_table" && schema && (
+      {(field.type === "table" || field.cell_structure !== undefined) && schema && (
         <ProgramTable
           field={field}
           value={Array.isArray(value) ? value : []}

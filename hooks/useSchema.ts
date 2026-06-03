@@ -19,7 +19,7 @@ export interface CellStructure {
 
 export interface SchemaField {
   name: string
-  type: "text" | "textarea" | "number" | "email" | "date" | "enum" | "boolean" | "program_table"
+  type: "text" | "textarea" | "number" | "email" | "date" | "enum" | "boolean" | "table"
   required: boolean
   label?: string
   description?: string
@@ -28,7 +28,7 @@ export interface SchemaField {
   max?: number
   min_length?: number
   max_length?: number
-  // program_table specific properties
+  // table specific properties
   date_range_start_field?: string
   date_range_end_field?: string
   columns?: string[]
