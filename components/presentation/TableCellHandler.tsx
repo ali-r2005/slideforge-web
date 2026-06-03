@@ -37,8 +37,12 @@ export function TableCellHandler({
     const merged = { ...cellData, ...updates }
     const cleaned: Record<string, any> = {}
 
-    // Include only parts that have content or are defined in schema
-    for (const part of cellStructure.parts) {
+    // Iterate through parts in user-defined order (respects drag-and-drop reordering)
+    const partsInOrder = partOrder
+      .map((name) => cellStructure.parts.find((p) => p.name === name))
+      .filter((part) => part !== undefined) as typeof cellStructure.parts
+
+    for (const part of partsInOrder) {
       const value = merged[part.name]
 
       // Include if has value, or if it's required or user provides it
