@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select"
 import type { Schema, SchemaField, SchemaGroup } from "@/hooks/useSchema"
 import { TableCellHandler } from "./TableCellHandler"
+import { DynamicTableField } from "./DynamicTableField"
 
 interface SchemaFormProps {
   schema: Schema
@@ -520,11 +521,10 @@ function FormField({ field, value, error, onChange, schema, formData = {} }: For
         </div>
       )}
 
-      {(field.type === "table" || field.cell_structure !== undefined) && schema && (
-        <ProgramTable
+      {(field.type === "table" || field.cell_structure !== undefined) && (
+        <DynamicTableField
           field={field}
           value={Array.isArray(value) ? value : []}
-          schema={schema}
           formData={formData}
           onChange={onChange}
         />

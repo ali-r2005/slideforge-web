@@ -17,6 +17,11 @@ export interface CellStructure {
   parts: CellPart[]
 }
 
+export interface RowSource {
+  type: "date_range" | "user_provided" | "fixed"
+  config?: Record<string, any>
+}
+
 export interface SchemaField {
   name: string
   type: "text" | "textarea" | "number" | "email" | "date" | "enum" | "boolean" | "table"
@@ -29,6 +34,8 @@ export interface SchemaField {
   min_length?: number
   max_length?: number
   // table specific properties
+  row_source?: RowSource
+  // legacy properties (for backward compatibility, not used with new schema)
   date_range_start_field?: string
   date_range_end_field?: string
   columns?: string[]
