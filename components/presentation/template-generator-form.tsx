@@ -127,7 +127,7 @@ export function TemplateGeneratorForm() {
   }
 
   return (
-    <div className="flex w-full max-w-7xl flex-col gap-6">
+    <div className="flex w-full max-w-full flex-col gap-6">
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-6 rounded-lg border bg-card p-6 text-card-foreground shadow-sm"
@@ -156,7 +156,7 @@ export function TemplateGeneratorForm() {
               No templates found. Please add .pptx files to the templates folder.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {templates.map((template) => {
                 const isSelected = templateName === template.name
                 const thumbnailUrl = template.thumbnail_url 

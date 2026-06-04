@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from "react"
 import { Button } from "@/components/ui/button"
 import { PlusIcon, TrashIcon } from "lucide-react"
-import type { SchemaField, CellStructure } from "@/hooks/useSchema"
+import type { SchemaField, CellStructure, RowSource } from "@/hooks/useSchema"
 import { TableCellHandler } from "./TableCellHandler"
 
 interface DynamicTableFieldProps {
@@ -19,7 +19,7 @@ export function DynamicTableField({
   formData,
   onChange,
 }: DynamicTableFieldProps) {
-  const rowSource = field.row_source || { type: "user_provided" }
+  const rowSource: RowSource = field.row_source || { type: "user_provided" }
   const columns = field.columns || []
   const hasCellStructure = field.cell_structure !== undefined
 
@@ -90,7 +90,7 @@ function DateRangeTable({
   const [isResizing, setIsResizing] = useState<number | null>(null)
   const [resizeStart, setResizeStart] = useState(0)
 
-  const rowSource = field.row_source || {}
+  const rowSource: RowSource = field.row_source || { type: "date_range" }
   const config = rowSource.config || {}
   const startFieldName = config.start_field || ""
   const endFieldName = config.end_field || ""
@@ -225,9 +225,9 @@ function DateRangeTable({
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b sticky top-0">
             <tr>
-              <th className="px-4 py-2 text-left font-medium min-w-24">Date</th>
+              <th className="px-4 py-2 text-left font-medium min-w-32">Date</th>
               {columns.map((col) => (
-                <th key={col} className="px-4 py-2 text-left font-medium min-w-48">
+                <th key={col} className="px-4 py-2 text-left font-medium min-w-96">
                   {formatLabel(col)}
                 </th>
               ))}
@@ -258,10 +258,10 @@ function DateRangeTable({
                           value={typeof row[col] === "string" ? row[col] : ""}
                           onChange={(e) => handleCellChange(dateIndex, col, e.target.value)}
                           placeholder={`Enter ${formatLabel(col).toLowerCase()}`}
-                          className="w-full p-2 border rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                          className="w-full p-3 border rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                           style={{
                             height: rowHeights[dateIndex] ? `${rowHeights[dateIndex] - 24}px` : "auto",
-                            minHeight: "24px",
+                            minHeight: "600px",
                           }}
                         />
                       )}
@@ -347,7 +347,7 @@ function UserProvidedTable({
           <thead className="bg-muted/50 border-b">
             <tr>
               {columns.map((col) => (
-                <th key={col} className="px-4 py-2 text-left font-medium min-w-48">
+                <th key={col} className="px-4 py-2 text-left font-medium min-w-96">
                   {formatLabel(col)}
                 </th>
               ))}
@@ -371,7 +371,8 @@ function UserProvidedTable({
                         value={typeof row[col] === "string" ? row[col] : ""}
                         onChange={(e) => handleCellChange(rowIndex, col, e.target.value)}
                         placeholder={`Enter ${formatLabel(col).toLowerCase()}`}
-                        className="w-full p-2 border rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring min-h-12"
+                        className="w-full p-3 border rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                        style={{ minHeight: "600px" }}
                       />
                     )}
                   </td>
@@ -432,7 +433,7 @@ function FixedTable({
   columns,
   hasCellStructure,
 }: FixedTableProps) {
-  const rowSource = field.row_source || {}
+  const rowSource: RowSource = field.row_source || { type: "fixed" }
   const config = rowSource.config || {}
   const fixedCount = config.count || 3
   const tableData = value && Array.isArray(value) ? value : []
@@ -487,7 +488,7 @@ function FixedTable({
             <tr>
               <th className="px-4 py-2 text-left font-medium w-12">#</th>
               {columns.map((col) => (
-                <th key={col} className="px-4 py-2 text-left font-medium min-w-48">
+                <th key={col} className="px-4 py-2 text-left font-medium min-w-96">
                   {formatLabel(col)}
                 </th>
               ))}
@@ -513,7 +514,8 @@ function FixedTable({
                         value={typeof row[col] === "string" ? row[col] : ""}
                         onChange={(e) => handleCellChange(rowIndex, col, e.target.value)}
                         placeholder={`Enter ${formatLabel(col).toLowerCase()}`}
-                        className="w-full p-2 border rounded text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring min-h-12"
+                        className="w-full p-3 border rounded text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                        style={{ minHeight: "600px" }}
                       />
                     )}
                   </td>
